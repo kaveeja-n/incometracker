@@ -124,6 +124,13 @@ tbody tr:hover{background:color-mix(in srgb,var(--blue) 7%,transparent)}
 </div></div>
 
 <script>
+var CLIENT_ID = "980674101315-1jgp0ip8bd7bg824a8270fhms8g51bu6.apps.googleusercontent.com";
+var DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+var DRIVE_FILE_NAME = "incomeflow-data.json";
+
+var accessToken = null;
+var driveFileId = null;
+var tokenClient = null;
 var DK="INCOMEFLOW_DATA_V2",SK="INCOMEFLOW_SOURCES_V2",TK="INCOMEFLOW_THEME_V2";
 var $=function(i){return document.getElementById(i)};
 function ld(k,f){try{var r=localStorage.getItem(k);return r?JSON.parse(r):f}catch(e){return f}}
@@ -265,6 +272,35 @@ applyTheme();pulse();render();
     .withFailureHandler(function(){$("cl").textContent="Drive offline (local cache)"})
     .getLedgerData();
 })();
+function initGoogleAuth() {
+  if (tokenClient) return true;
+  if (!window.google || !google.accounts || !google.accounts.oauth2) {
+    return false;
+  }
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: function(resp) {
+      if (resp && resp.error) {
+        $("drvStatus").textContent = "Drive auth error: " + resp.error;
+        return;
+      }
+
+      if (resp && resp.access_token) {
+        accessToken = resp.access_token;
+        driveFileId = null; // Re-verify/find file for the active session
+        $("linkDrive").textContent = "Drive Linked";
+        $("drvStatus").textContent = "Connecting to Drive…";
+        loadFromUserDrive();
+      } else {
+        $("drvStatus").textContent = "Sign-in cancelled";
+      }
+    }
+  });
+
+  return true;
+}
 </script>
 </body>
 </html>
