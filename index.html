@@ -53,6 +53,7 @@ td input:focus,td select:focus{border-color:var(--line)}
 .Rc{color:var(--green)}.Pc{color:var(--amber)}
 .em{text-align:center;color:var(--muted);padding:34px}.em .ic{width:38px;height:38px;display:block;margin:0 auto 8px}
 .hide{display:none!important}
+.od{color:var(--red)}.sn{color:var(--amber)}td small.od{display:block;font-size:11px;padding-left:6px}button.s{padding:6px 8px;font-size:12px}
 section:not(.hide){animation:vin .45s cubic-bezier(.2,.8,.2,1)}@keyframes vin{from{opacity:0;transform:translateY(12px)}}
 #tb.go tr{animation:rin .35s both}@keyframes rin{from{opacity:0;transform:translateX(-8px)}}
 tbody tr:hover{background:color-mix(in srgb,var(--blue) 7%,transparent)}
@@ -84,8 +85,8 @@ tbody tr:hover{background:color-mix(in srgb,var(--blue) 7%,transparent)}
     <div class="card kpi" style="--k:var(--cyan)"><div class="ib" data-i="swap"></div><div class="km"><small>Total Expected Inflows</small><b id="kT"></b><small id="kTp"></small></div><div class="ks" data-i="cal"><span>Expected</span></div></div>
   </div>
   <div class="grid">
-    <div class="card"><div class="hd"><h3 data-i="bars">Monthly Income Inflows</h3><span class="sp"></span><span class="lg"><i style="background:var(--green)"></i>Received</span><span class="lg"><i style="background:var(--amber)"></i>Pending</span><select id="bm"><option value="rp">Received vs Pending</option><option value="p">Receivables by Month</option></select></div><div class="cv"><canvas id="bar"></canvas></div><small class="m" id="strip"></small></div>
-    <div class="card"><div class="hd"><h3 data-i="pie">Income by Source</h3><span class="sp"></span><select id="pm" class="mon"></select></div><div class="cv"><canvas id="pie"></canvas><div class="ov hide" id="pov"><span>No Data Available</span><em><i></i>No Income Data</em></div></div></div>
+    <div class="card"><div class="hd"><h3 data-i="bars">Monthly Income Inflows</h3><span class="sp"></span><span class="lg"><i style="background:var(--green)"></i>Received</span><span class="lg"><i style="background:var(--amber)"></i>Pending</span><button class="s" data-png="bar" data-i="down" aria-label="Download chart image" title="Download PNG"></button><select id="bm"><option value="rp">Received vs Pending</option><option value="p">Receivables by Month</option></select></div><div class="cv"><canvas id="bar"></canvas></div><small class="m" id="strip"></small></div>
+    <div class="card"><div class="hd"><h3 data-i="pie">Income by Source</h3><span class="sp"></span><button class="s" data-png="pie" data-i="down" aria-label="Download chart image" title="Download PNG"></button><select id="pm" class="mon"></select></div><div class="cv"><canvas id="pie"></canvas><div class="ov hide" id="pov"><span>No Data Available</span><em><i></i>No Income Data</em></div></div></div>
   </div>
   <div class="card fb">
     <div class="sr"><span data-i="search"></span><input id="q" placeholder="Search remarks/sources…"></div>
@@ -95,12 +96,15 @@ tbody tr:hover{background:color-mix(in srgb,var(--blue) 7%,transparent)}
     <button class="c1" id="imp" data-i="up">Import Excel</button><button class="c2" id="xx" data-i="sheet">Export Excel</button><button id="xc" data-i="down">Export CSV</button>
     <input type="file" id="fi" accept=".xlsx,.xls,.csv" class="hide">
   </div>
-  <div class="card tw"><table><thead><tr><th>#</th><th>Month</th><th>Date</th><th>Remarks / Source</th><th>Status</th><th class="n">Inflows / Amount (Actions)</th></tr></thead><tbody id="tb"></tbody></table></div>
+  <div class="card tw"><table><thead><tr><th>#</th><th>Month</th><th>Date</th><th>Remarks / Source</th><th>Status</th><th>Due</th><th class="n">Inflows / Amount (Actions)</th></tr></thead><tbody id="tb"></tbody></table></div>
   <p class="m s" id="cnt"></p>
 </section>
 
 <section id="rep" class="hide">
-  <div class="card" style="margin-bottom:18px"><div class="hd"><h3 data-i="bars">Total Income by Month</h3></div><div class="cv"><canvas id="area"></canvas></div></div>
+  <div class="card fb"><b>Filters</b><select id="ry"></select><select id="rst"><option value="">All Statuses</option><option value="Received">Received Only</option><option value="Pending">Pending Only</option></select><small class="m">Year and status are shared with the Dashboard.</small></div>
+  <div class="kpis"><div class="card kpi" style="--k:var(--cyan)"><div class="ib" data-i="bars"></div><div class="km"><small>Average Monthly Inflow</small><b id="rA"></b><small id="rAn"></small></div></div><div class="card kpi" id="rgc" style="--k:var(--green)"><div class="ib" data-i="swap"></div><div class="km"><small>Month-over-Month Growth</small><b id="rG"></b><small id="rGn"></small></div></div><div class="card kpi" style="--k:var(--blue)"><div class="ib" data-i="wallet"></div><div class="km"><small>Total Inflow</small><b id="rT"></b><small id="rTn"></small></div></div></div>
+  <div class="card" style="margin-bottom:18px"><div class="hd"><h3 data-i="cal">Receivables aging &amp; upcoming inflows</h3></div><div class="kpis" id="ag" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:8px"></div><div id="up"></div></div>
+  <div class="card" style="margin-bottom:18px"><div class="hd"><h3 data-i="bars">Total Income by Month</h3><span class="sp"></span><button class="s" data-png="area" data-i="down" aria-label="Download chart image" title="Download PNG"></button></div><div class="cv"><canvas id="area"></canvas></div></div>
   <div class="card tw"><table><thead><tr><th>Month</th><th class="n">Pending receivables</th><th class="n">Received income</th></tr></thead><tbody id="rt"></tbody></table></div>
 </section>
 
@@ -117,6 +121,7 @@ tbody tr:hover{background:color-mix(in srgb,var(--blue) 7%,transparent)}
   <div id="t2" class="hide">
     <label>Date</label><input type="date" id="md">
     <label>Income status</label><select id="ms"><option>Received</option><option>Pending</option></select>
+    <div id="duew" class="hide"><label>Expected / due date (optional)</label><input type="date" id="mdue"></div>
     <label>Remarks / Source</label><select id="msrc"></select>
     <div id="cust" class="hide"><input id="mc" placeholder="Custom source" style="margin-top:8px"><label><input type="checkbox" id="msave" style="width:auto"> Save to preferences</label></div>
     <label>Inflow amount</label><input type="number" step="0.01" min="0" id="ma"><br><br><button class="g" id="mb">Add entry</button>
@@ -146,27 +151,35 @@ function mname(m){var p=m.split("-");return MN[+p[1]-1]+" "+p[0]}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function cv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
 function months(){var s={};D.forEach(function(x){s[x.date.slice(0,7)]=1});return Object.keys(s).sort()}
-function add(date,rem,st,amt){if(!(amt>0))return false;D.push({id:uid(),date:date,remarks:rem||"Unspecified",status:st,amount:amt});return true}
-function hasGas(){return typeof google!=="undefined"&&google.script&&google.script.run}
-function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}if(k===DK||k===SK)cloud()}
-function cloud(){
-  if(!hasGas()){$("cl").textContent="Saved on this device only";return}
-  clearTimeout(syncTimer);
-  $("cl").textContent="Syncing…";
-  syncTimer=setTimeout(function(){
-    var snapshot={entries:D.slice(),sources:SRC.slice()};
-    syncQueue=syncQueue.then(function(){
-      return new Promise(function(resolve,reject){
-        google.script.run
-          .withSuccessHandler(function(res){$("cl").textContent="☁ Drive Sheet synced";resolve(res)})
-          .withFailureHandler(function(err){$("cl").textContent="Cloud save failed";reject(err)})
-          .saveLedgerData(snapshot);
-      });
-    }).catch(function(){});
-  },600);
-}
+function add(date,rem,st,amt,due){if(!(amt>0))return false;D.push({id:uid(),date:date,remarks:rem||"Unspecified",status:st,amount:amt,due:(st==="Pending"&&due)?due:""});return true}
+function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}if(k!==TK)cloud()}
+function cloud(){if(!CL)return;clearTimeout(ct);$("cl").textContent="Syncing…";ct=setTimeout(function(){CL.set({entries:D,sources:SRC,at:Date.now()}).then(function(){$("cl").textContent="☁ Cloud saved"},function(){$("cl").textContent="Cloud save failed"})},800)}
 function commit(){sv(DK,D);render()}
 function cnt(id,v){var a=cur[id]||0,t0=performance.now();cur[id]=v;(function f(t){var p=Math.min(1,(t-t0)/700),e=1-Math.pow(1-p,3);$(id).textContent=rs(a+(v-a)*e);if(p<1)requestAnimationFrame(f)})(t0)}
+var YR=0;
+function dd(x){return Math.round((new Date(x.due)-new Date(today))/864e5)}
+function dueCell(x){if(x.status!=="Pending")return '<span class="m">—</span>';var c="";if(x.due){var n=dd(x);c=n<0?"od":n<=7?"sn":""}return '<input type="date" data-f="due" value="'+(x.due||"")+'" class="'+c+'" title="Expected / due date">'+(c==="od"?'<small class="od">Overdue</small>':"")}
+function png(id){var c=charts[id];if(!c)return;var s=c.canvas,o=document.createElement("canvas");o.width=s.width;o.height=s.height;var g=o.getContext("2d");g.fillStyle=cv("--card");g.fillRect(0,0,o.width,o.height);g.drawImage(s,0,0);var b=atob(o.toDataURL("image/png").split(",")[1]),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);dl({bar:"Monthly_Income_Inflows",pie:"Income_by_Source",area:"Total_Income_by_Month"}[id]+".png",u.buffer)}
+function repRender(yr,sc,tx,cy){
+  var st=$("fs").value,ys={};D.forEach(function(x){ys[+x.date.slice(0,4)]=1});
+  var yl=Object.keys(ys).sort();if(!yl.length)yl=[String(yr)];
+  $("ry").innerHTML=yl.map(function(y){return "<option"+(+y===yr?" selected":"")+">"+y+"</option>"}).join("");$("rst").value=st;
+  var tot=[],pn=[],rc=[];
+  MN.forEach(function(_,i){var m=yr+"-"+("0"+(i+1)).slice(-2),a=0,b=0;D.forEach(function(x){if(x.date.slice(0,7)===m&&(!st||x.status===st)){if(x.status==="Pending")a+=x.amount;else b+=x.amount}});pn.push(a);rc.push(b);tot.push(a+b)});
+  var act=tot.filter(function(v){return v>0}),sum=tot.reduce(function(a,v){return a+v},0);
+  $("rA").textContent=rs(act.length?sum/act.length:0);$("rAn").textContent=act.length+" active month"+(act.length===1?"":"s")+" in "+yr;
+  $("rT").textContent=rs(sum);$("rTn").textContent=(st||"All statuses")+" · "+yr;
+  var L=-1;tot.forEach(function(v,i){if(v>0)L=i});
+  if(L>0&&tot[L-1]>0){var p=(tot[L]-tot[L-1])/tot[L-1]*100;$("rG").textContent=(p>0?"+":"")+p.toFixed(1)+"%";$("rGn").textContent=MN[L]+" vs "+MN[L-1];$("rgc").style.setProperty("--k",p>=0?"var(--green)":"var(--red)")}
+  else{$("rG").textContent="—";$("rGn").textContent="Needs data in two consecutive months";$("rgc").style.setProperty("--k","var(--muted)")}
+  mk("area",{type:"line",data:{labels:MN,datasets:[{label:"Total inflow"+(st?" ("+st+")":""),data:tot,fill:true,borderColor:cy,backgroundColor:cy+"33",tension:.35}]},options:{maintainAspectRatio:false,scales:sc,plugins:{legend:{labels:{color:tx}}}}});
+  $("rt").innerHTML=MN.map(function(m,i){return tot[i]>0?"<tr><td>"+m+" "+yr+'</td><td class="n Pc">'+rs(pn[i])+'</td><td class="n Rc">'+rs(rc[i])+"</td></tr>":""}).join("")||'<tr><td colspan="3" class="em">No data for this selection</td></tr>';
+  var pd=D.filter(function(x){return x.status==="Pending"}),B=[["Overdue","--red",0,0],["Next 7 days","--amber",0,0],["8–30 days","--cyan",0,0],["Later / no date","--muted",0,0]];
+  pd.forEach(function(x){var i=3;if(x.due){var n=dd(x);i=n<0?0:n<=7?1:n<=30?2:3}B[i][2]+=x.amount;B[i][3]++});
+  $("ag").innerHTML=B.map(function(b){return '<div class="card" style="--k:var('+b[1]+')"><small class="m">'+b[0]+'</small><b style="color:var(--k);font-size:20px;display:block">'+rs(b[2])+'</b><small class="m">'+b[3]+" entries</small></div>"}).join("");
+  var up=pd.filter(function(x){return x.due}).sort(function(a,b){return a.due.localeCompare(b.due)}).slice(0,6);
+  $("up").innerHTML=up.length?up.map(function(x){var n=dd(x);return '<div class="hd" style="margin:8px 0 0"><span>'+esc(x.remarks)+'</span><span class="'+(n<0?"od":"m")+'">'+(n<0?Math.abs(n)+" days overdue":n===0?"due today":"due in "+n+" days")+" · "+x.due+'</span><span class="sp"></span><b>'+rs(x.amount)+"</b></div>"}).join(""):'<p class="m">Add a due date to pending entries to see upcoming inflows.</p>';
+}
 function pulse(){var t=$("tb");t.classList.add("go");setTimeout(function(){t.classList.remove("go")},900)}
 function mk(id,cfg){cfg.options.animation={duration:1000,easing:"easeOutQuart"};cfg.options.transitions={active:{animation:{duration:250}}};var c=charts[id];if(c&&c.config.type===cfg.type){c.data=cfg.data;c.options=cfg.options;c.update()}else{if(c)c.destroy();charts[id]=new Chart($(id),cfg)}}
 function applyTheme(){document.documentElement.setAttribute("data-theme",theme);$("tl").textContent=theme==="dark"?"Light Mode":"Dark Mode";$("ti").innerHTML=ic(theme==="dark"?"sun":"moon")}
@@ -184,11 +197,11 @@ function render(){
   fill();
   var R=0,Pn=0,rn=0,pn=0;D.forEach(function(x){if(x.status==="Received"){R+=x.amount;rn++}else{Pn+=x.amount;pn++}});
   cnt("kR",R);cnt("kP",Pn);cnt("kT",R+Pn);
-  $("kRn").textContent=rn+" entries";$("kPn").textContent=pn+" entries";$("kTp").textContent=(R+Pn?Math.round(R/(R+Pn)*100):0)+"% Received";
+  $("kRn").textContent=rn+" entries";var od=D.filter(function(x){return x.status==="Pending"&&x.due&&x.due<today}).length;$("kPn").textContent=pn+" entries"+(od?" · "+od+" overdue":"");$("kTp").textContent=(R+Pn?Math.round(R/(R+Pn)*100):0)+"% Received";
   var f=filt().sort(function(a,b){return a.date.localeCompare(b.date)});
   $("cnt").textContent=f.length+" of "+D.length+" entries shown";
-  $("tb").innerHTML=f.length?f.map(function(x,i){return '<tr data-id="'+x.id+'"><td>'+(i+1)+'</td><td>'+mname(x.date.slice(0,7))+'</td><td><input type="date" data-f="date" value="'+x.date+'"></td><td><input data-f="remarks" value="'+esc(x.remarks)+'"></td><td><select data-f="status" class="'+(x.status==="Received"?"Rc":"Pc")+'"><option'+(x.status==="Received"?" selected":"")+'>Received</option><option'+(x.status==="Pending"?" selected":"")+'>Pending</option></select></td><td class="n"><div class="am"><input type="number" step="0.01" data-f="amount" value="'+x.amount+'"><button data-x="'+x.id+'" aria-label="Delete">'+ic("trash")+'</button></div></td></tr>'}).join(""):'<tr><td colspan="6" class="em">'+ic("sheet")+'No entries yet</td></tr>';
-  var ys=D.map(function(x){return +x.date.slice(0,4)}),yr=ys.length?Math.max.apply(null,ys):new Date().getFullYear();
+  $("tb").innerHTML=f.length?f.map(function(x,i){return '<tr data-id="'+x.id+'"><td>'+(i+1)+'</td><td>'+mname(x.date.slice(0,7))+'</td><td><input type="date" data-f="date" value="'+x.date+'"></td><td><input data-f="remarks" value="'+esc(x.remarks)+'"></td><td><select data-f="status" class="'+(x.status==="Received"?"Rc":"Pc")+'"><option'+(x.status==="Received"?" selected":"")+'>Received</option><option'+(x.status==="Pending"?" selected":"")+'>Pending</option></select></td><td>'+dueCell(x)+'</td><td class="n"><div class="am"><input type="number" step="0.01" data-f="amount" value="'+x.amount+'"><button data-x="'+x.id+'" aria-label="Delete">'+ic("trash")+'</button></div></td></tr>'}).join(""):'<tr><td colspan="7" class="em">'+ic("sheet")+'No entries yet</td></tr>';
+  var ys=D.map(function(x){return +x.date.slice(0,4)}),yr=(YR&&ys.indexOf(YR)>-1)?YR:(ys.length?Math.max.apply(null,ys):new Date().getFullYear());
   var rec=MN.map(function(_,i){return D.filter(function(x){return x.date.slice(0,7)===yr+"-"+("0"+(i+1)).slice(-2)&&x.status==="Received"}).reduce(function(a,x){return a+x.amount},0)});
   var pen=MN.map(function(_,i){return D.filter(function(x){return x.date.slice(0,7)===yr+"-"+("0"+(i+1)).slice(-2)&&x.status==="Pending"}).reduce(function(a,x){return a+x.amount},0)});
   var tx=cv("--muted"),ln=cv("--line"),g=cv("--green"),w=cv("--amber"),cy=cv("--cyan"),po=$("bm").value==="p";
@@ -198,15 +211,19 @@ function render(){
   var by={};D.filter(function(x){return !mon||x.date.slice(0,7)===mon}).forEach(function(x){by[x.remarks]=(by[x.remarks]||0)+x.amount});
   var k=Object.keys(by);$("pov").classList.toggle("hide",k.length>0);
   mk("pie",{type:"doughnut",data:{labels:k,datasets:[{data:k.map(function(s){return by[s]}),backgroundColor:["#3b82f6","#10b981","#f5b301","#a855f7","#f43f5e","#22d3ee","#84cc16","#ec4899"],borderColor:cv("--card"),borderWidth:2}]},options:{maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom",labels:{color:tx}}}}});
-  mk("area",{type:"line",data:{labels:MN,datasets:[{label:"Total inflow",data:MN.map(function(_,i){return rec[i]+pen[i]}),fill:true,borderColor:cy,backgroundColor:cy+"33",tension:.35}]},options:{maintainAspectRatio:false,scales:sc,plugins:{legend:{labels:{color:tx}}}}});
+  repRender(yr,sc,tx,cy);
   var ms=months();
-  $("rt").innerHTML=ms.map(function(m){var a=0,b=0;D.forEach(function(x){if(x.date.slice(0,7)===m){if(x.status==="Pending")a+=x.amount;else b+=x.amount}});return "<tr><td>"+mname(m)+'</td><td class="n Pc">'+rs(a)+'</td><td class="n Rc">'+rs(b)+"</td></tr>"}).join("")||'<tr><td colspan="3" class="em">No data yet</td></tr>';
+  var _x=ms.map(function(m){var a=0,b=0;D.forEach(function(x){if(x.date.slice(0,7)===m){if(x.status==="Pending")a+=x.amount;else b+=x.amount}});return "<tr><td>"+mname(m)+'</td><td class="n Pc">'+rs(a)+'</td><td class="n Rc">'+rs(b)+"</td></tr>"}).join("")||'<tr><td colspan="3" class="em">No data yet</td></tr>';
 }
 
 document.querySelectorAll(".nav").forEach(function(b){b.onclick=function(){document.querySelectorAll(".nav").forEach(function(n){n.classList.toggle("on",n===b)});["dash","rep","set"].forEach(function(v){$(v).classList.toggle("hide",v!==b.dataset.v)});pulse();render()}});
 $("theme").onclick=function(){theme=theme==="dark"?"light":"dark";sv(TK,theme);applyTheme();render()};
 document.querySelectorAll(".mon").forEach(function(s){s.onchange=function(){mon=s.value;pulse();render()}});
-$("q").oninput=render;$("fs").onchange=$("bm").onchange=function(){pulse();render()};
+$("q").oninput=render;
+$("ry").onchange=function(){YR=+this.value;pulse();render()};
+$("rst").onchange=function(){$("fs").value=this.value;pulse();render()};
+$("ms").onchange=function(){$("duew").classList.toggle("hide",this.value!=="Pending")};
+document.addEventListener("click",function(e){var b=e.target.closest("[data-png]");if(b)png(b.dataset.png)});$("fs").onchange=$("bm").onchange=function(){pulse();render()};
 $("clr").onclick=function(){if(D.length&&confirm("Delete ALL saved inflows?")){D=[];commit()}};
 $("tb").onchange=function(e){var tr=e.target.closest("tr"),f=e.target.dataset.f;if(!tr||!f)return;var x=D.find(function(y){return y.id===tr.dataset.id});if(!x)return;x[f]=f==="amount"?(parseFloat(e.target.value)||0):e.target.value;commit()};
 $("tb").onclick=function(e){var b=e.target.closest("button[data-x]");if(b&&confirm("Delete this entry?")){D=D.filter(function(x){return x.id!==b.dataset.x});commit()}};
@@ -218,7 +235,7 @@ $("add").onclick=function(){$("md").value=today;show(true)};$("mx").onclick=func
 document.querySelectorAll(".tabs button").forEach(function(b){b.onclick=function(){document.querySelectorAll(".tabs button").forEach(function(x){x.classList.toggle("on",x===b)});["t1","t2"].forEach(function(t){$(t).classList.toggle("hide",t!==b.dataset.t)})}});
 $("msrc").onchange=function(){$("cust").classList.toggle("hide",this.value!=="__c")};
 $("mb").onclick=function(){var s=$("msrc").value;if(s==="__c"){s=$("mc").value.trim();if(s&&$("msave").checked&&SRC.indexOf(s)<0){SRC.push(s);sv(SK,SRC)}}
-  if(add($("md").value||today,s,$("ms").value,parseFloat($("ma").value))){$("ma").value="";commit();show(false)}else alert("Enter a valid amount.")};
+  if(add($("md").value||today,s,$("ms").value,parseFloat($("ma").value),$("mdue").value)){$("ma").value="";$("mdue").value="";commit();show(false)}else alert("Enter a valid amount.")};
 function pdate(s){var m=s.match(/(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];m=s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);if(m){var y=m[3].length==2?"20"+m[3]:m[3];return y+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2)}return today}
 $("smsb").onclick=function(){var n=0;$("sms").value.split(/\n+/).forEach(function(l){
   var a=l.match(/(?:Rs\.?|INR|LKR|amt|amount)\s*[:.]?\s*([\d,]+(?:\.\d+)?)/i);if(!a)return;
@@ -231,47 +248,26 @@ $("fi").onchange=function(){var fl=this.files[0];if(!fl)return;var r=new FileRea
   rows.forEach(function(o){var k={};Object.keys(o).forEach(function(c){k[c.toLowerCase().trim()]=o[c]});
     var d=k["date"],ds;if(typeof d==="number")ds=new Date(Math.round((d-25569)*864e5)).toISOString().slice(0,10);else ds=pdate(String(d||""));
     var st=/pend/i.test(k["status"])?"Pending":"Received",am=parseFloat(String(k["inflow amount"]||k["amount"]||"").replace(/[^\d.]/g,""));
-    if(add(ds,String(k["remarks / source"]||k["remarks"]||k["source"]||"Imported"),st,am))n++});
+    var dd0=k["due date"]||k["due"]||k["expected date"],dv=typeof dd0==="number"?new Date(Math.round((dd0-25569)*864e5)).toISOString().slice(0,10):(dd0?pdate(String(dd0)):"");if(add(ds,String(k["remarks / source"]||k["remarks"]||k["source"]||"Imported"),st,am,dv))n++});
   alert("Imported "+n+" of "+rows.length+" rows.");commit()}catch(e){alert("Could not read that file.")}};r.readAsArrayBuffer(fl);this.value=""};
 
-function rowsOut(){return filt().map(function(x){return {"Date":x.date,"Month":x.date.slice(0,7),"Remarks / Source":x.remarks,"Status":x.status,"Inflow Amount":x.amount}})}
-function dl(name,data){
-  if(typeof claude!=="undefined"&&claude.use){
-    claude.use("downloads").then(function(d){if(d)return d.save({filename:name,data:data})}).catch(function(){});
-    return;
-  }
-  var blob=data instanceof Blob?data:new Blob([data],{type:typeof data==="string"?"text/csv;charset=utf-8;":"application/octet-stream"});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement("a");
-  a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);
-  setTimeout(function(){URL.revokeObjectURL(url)},1000);
-}
+function rowsOut(){return filt().map(function(x){return {"Date":x.date,"Month":x.date.slice(0,7),"Remarks / Source":x.remarks,"Status":x.status,"Due Date":x.due||"","Inflow Amount":x.amount}})}
+function dl(name,data){var p=typeof claude==="undefined"?Promise.resolve(null):claude.use("downloads");p.then(function(d){if(!d){alert("File downloads aren’t available here.");return}return d.save({filename:name,data:data})}).catch(function(e){if(!e||e.code!=="declined")alert("Couldn’t save the file.")})}
 function wbOut(rows,name){var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Inflows");dl(name,XLSX.write(wb,{type:"array",bookType:"xlsx"}))}
 $("xx").onclick=function(){wbOut(rowsOut(),"Income_Inflows_Ledger.xlsx")};
 $("xc").onclick=function(){dl("Income_Inflows_Ledger.csv",XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(rowsOut())))};
 $("tp").onclick=function(){wbOut([{"Date":today,"Month":today.slice(0,7),"Remarks / Source":"Salary","Status":"Received","Inflow Amount":50000}],"IncomeFlow_Import_Template.xlsx")};
 
 applyTheme();pulse();render();
-
-(function initDriveSync(){
-  if(!hasGas()){$("cl").textContent="Saved on this device only";return}
-  $("cl").textContent="Loading Drive…";
-  google.script.run
-    .withSuccessHandler(function(data){
-      if(data&&Array.isArray(data.entries)){
-        if(data.entries.length>0||D.length===0){D=data.entries}
-        if(Array.isArray(data.sources)&&data.sources.length>0){SRC=data.sources}
-        try{localStorage.setItem(DK,JSON.stringify(D));localStorage.setItem(SK,JSON.stringify(SRC))}catch(e){}
-        render();
-        $("cl").textContent="☁ Synced with Drive";
-        if(data.entries.length===0&&D.length>0)cloud();
-      }else{
-        cloud();
-      }
-    })
-    .withFailureHandler(function(){$("cl").textContent="Drive offline (local cache)"})
-    .getLedgerData();
-})();
+(async function(){try{
+  var u=await claude.use("user"),db=await claude.use("db");if(!u||!db)return;
+  var id=await u.id();if(!id)return;
+  CL=db.doc("data/users/"+id+"/ledger");
+  var t=setTimeout(function(){$("cl").textContent="Cloud unreachable"},10000);
+  var s=await CL.get();clearTimeout(t);var d=s.exists?s.data():null;
+  if(d&&Array.isArray(d.entries)){D=d.entries;if(Array.isArray(d.sources))SRC=d.sources;try{localStorage.setItem(DK,JSON.stringify(D));localStorage.setItem(SK,JSON.stringify(SRC))}catch(e){}render();$("cl").textContent="☁ Synced"}
+  else{await CL.set({entries:D,sources:SRC,at:Date.now()});$("cl").textContent="☁ Cloud saved"}
+}catch(e){$("cl").textContent="Saved on this device only"}})();
 function initGoogleAuth() {
   if (tokenClient) return true;
   if (!window.google || !google.accounts || !google.accounts.oauth2) {
@@ -322,92 +318,6 @@ $("linkDrive").onclick = function() {
 window.addEventListener("load", function() {
   initGoogleAuth();
 });
-
-async function driveRequest(url, options) {
-  options = options || {};
-  options.headers = Object.assign({}, options.headers || {}, {
-    "Authorization": "Bearer " + accessToken
-  });
-  var res = await fetch(url, options);
-  if (res.status === 401) {
-    accessToken = null;
-    $("linkDrive").textContent = "Link Google Drive";
-    $("drvStatus").textContent = "Session expired — click Link Google Drive";
-    throw new Error("Token expired");
-  }
-  return res;
-}
-
-async function findOrCreateDriveFile() {
-  var q = encodeURIComponent("name='" + DRIVE_FILE_NAME + "' and trashed=false");
-  var listRes = await driveRequest("https://www.googleapis.com/drive/v3/files?q=" + q + "&fields=files(id,name)");
-  var listData = await listRes.json();
-  if (listData.files && listData.files.length > 0) {
-    return listData.files[0].id;
-  }
-
-  var createRes = await driveRequest("https://www.googleapis.com/drive/v3/files", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: DRIVE_FILE_NAME,
-      mimeType: "application/json"
-    })
-  });
-  var created = await createRes.json();
-  return created.id;
-}
-
-async function loadFromUserDrive() {
-  try {
-    driveFileId = await findOrCreateDriveFile();
-    var fileRes = await driveRequest("https://www.googleapis.com/drive/v3/files/" + driveFileId + "?alt=media");
-    var text = await fileRes.text();
-
-    if (text && text.trim()) {
-      var parsed = JSON.parse(text);
-      if (Array.isArray(parsed.entries)) {
-        D = parsed.entries;
-        localStorage.setItem(DK, JSON.stringify(D));
-      }
-      if (Array.isArray(parsed.sources) && parsed.sources.length > 0) {
-        SRC = parsed.sources;
-        localStorage.setItem(SK, JSON.stringify(SRC));
-      }
-      render();
-      $("drvStatus").textContent = "☁ Synced with user Drive";
-    } else {
-      await saveToUserDrive();
-    }
-  } catch (err) {
-    if (accessToken) $("drvStatus").textContent = "Drive sync error";
-  }
-}
-
-async function saveToUserDrive() {
-  if (!accessToken) return;
-  try {
-    if (!driveFileId) driveFileId = await findOrCreateDriveFile();
-    $("drvStatus").textContent = "Syncing to Drive…";
-    var payload = JSON.stringify({
-      entries: D,
-      sources: SRC,
-      updatedAt: new Date().toISOString()
-    }, null, 2);
-
-    await driveRequest(
-      "https://www.googleapis.com/upload/drive/v3/files/" + driveFileId + "?uploadType=media",
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: payload
-      }
-    );
-    $("drvStatus").textContent = "☁ Saved to Drive";
-  } catch (err) {
-    if (accessToken) $("drvStatus").textContent = "Drive save failed";
-  }
-}
 </script>
 </body>
 </html>
