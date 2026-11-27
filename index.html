@@ -7,7 +7,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{--bg:#0a0f1e;--card:#0f1729;--line:#1b2744;--text:#e8edf7;--muted:#8693ad;--green:#10b981;--amber:#f5b301;--cyan:#22d3ee;--red:#f43f5e;--blue:#3b82f6;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 :root[data-theme="light"]{--bg:#f2f5fa;--card:#fff;--line:#e1e6ef;--text:#18202e;--muted:#667389;--green:#059669;--amber:#b45309;--cyan:#0e7490;--red:#e11d48;--blue:#2563eb;color-scheme:light}
@@ -93,7 +95,7 @@ tbody tr:hover{background:color-mix(in srgb,var(--blue) 7%,transparent)}
     <select id="fm" class="mon"></select>
     <select id="fs"><option value="">All Statuses</option><option value="Received">Received Only</option><option value="Pending">Pending Only</option></select>
     <span class="sp"></span>
-    <button class="c1" id="imp" data-i="up">Import Excel</button><button class="c2" id="xx" data-i="sheet">Export Excel</button><button id="xc" data-i="down">Export CSV</button>
+    <button type="button" class="c1" id="imp" data-i="up">Import Excel</button><button type="button" class="c2" id="xx" data-i="sheet">Export Excel</button><button type="button" id="xc" data-i="down">Export CSV</button>
     <input type="file" id="fi" accept=".xlsx,.xls,.csv" class="hide">
   </div>
   <div class="card tw"><table><thead><tr><th>#</th><th>Month</th><th>Date</th><th>Remarks / Source</th><th>Status</th><th>Due</th><th class="n">Inflows / Amount (Actions)</th></tr></thead><tbody id="tb"></tbody></table></div>
@@ -115,7 +117,7 @@ tbody tr:hover{background:color-mix(in srgb,var(--blue) 7%,transparent)}
 </div>
 
 <div class="mod hide" id="mod"><div class="box">
-  <div class="hd"><b>Add inflow</b><span class="sp"></span><button id="tp" class="s" data-i="down">Import template</button><button id="mx" aria-label="Close">✕</button></div>
+  <div class="hd"><b>Add inflow</b><span class="sp"></span><button type="button" id="tp" class="s" data-i="down">Import template</button><button id="mx" aria-label="Close">✕</button></div>
   <div class="tabs"><button data-t="t1" class="on">Parse SMS</button><button data-t="t2">Manual</button></div>
   <div id="t1"><label>Paste SMS / bank credit alerts (one per line)</label><textarea id="sms" rows="6"></textarea><br><br><button class="g" id="smsb">Parse &amp; add as Received</button></div>
   <div id="t2" class="hide">
@@ -243,7 +245,7 @@ $("smsb").onclick=function(){var n=0;$("sms").value.split(/\n+/).forEach(functio
   if(add(pdate(l),s?s[1].trim():"SMS credit","Received",parseFloat(a[1].replace(/,/g,""))))n++});
   $("sms").value="";commit();if(n)show(false);else alert("No amounts found.")};
 $("imp").onclick=function(){$("fi").click()};
-$("fi").onchange=function(){var fl=this.files[0];if(!fl)return;var r=new FileReader();r.onload=function(){try{
+$("fi").onchange=function(){var fl=this.files[0];if(!fl)return;if(typeof XLSX==="undefined"){alert("Excel library failed to load. Check your internet connection.");return}var r=new FileReader();r.onload=function(){try{
   var wb=XLSX.read(r.result,{type:"array"}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""}),n=0;
   rows.forEach(function(o){var k={};Object.keys(o).forEach(function(c){k[c.toLowerCase().trim()]=o[c]});
     var d=k["date"],ds;if(typeof d==="number")ds=new Date(Math.round((d-25569)*864e5)).toISOString().slice(0,10);else ds=pdate(String(d||""));
@@ -252,7 +254,7 @@ $("fi").onchange=function(){var fl=this.files[0];if(!fl)return;var r=new FileRea
   alert("Imported "+n+" of "+rows.length+" rows.");commit()}catch(e){alert("Could not read that file.")}};r.readAsArrayBuffer(fl);this.value=""};
 
 function rowsOut(){return filt().map(function(x){return {"Date":x.date,"Month":x.date.slice(0,7),"Remarks / Source":x.remarks,"Status":x.status,"Due Date":x.due||"","Inflow Amount":x.amount}})}
-function dl(name,data){var p=typeof claude==="undefined"?Promise.resolve(null):claude.use("downloads");p.then(function(d){if(!d){alert("File downloads aren’t available here.");return}return d.save({filename:name,data:data})}).catch(function(e){if(!e||e.code!=="declined")alert("Couldn’t save the file.")})}
+function dl(name,data){var blob=data instanceof Blob?data:new Blob([data],{type:typeof data==="string"?"text/csv;charset=utf-8;":"application/octet-stream"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url)},1000)}
 function wbOut(rows,name){var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Inflows");dl(name,XLSX.write(wb,{type:"array",bookType:"xlsx"}))}
 $("xx").onclick=function(){wbOut(rowsOut(),"Income_Inflows_Ledger.xlsx")};
 $("xc").onclick=function(){dl("Income_Inflows_Ledger.csv",XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(rowsOut())))};
