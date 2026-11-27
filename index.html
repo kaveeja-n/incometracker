@@ -301,6 +301,27 @@ function initGoogleAuth() {
 
   return true;
 }
+$("linkDrive").onclick = function() {
+  var ready = initGoogleAuth();
+  if (!ready) {
+    $("drvStatus").textContent = "Loading Google sign-in…";
+    setTimeout(function() {
+      if (initGoogleAuth()) {
+        tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" });
+      } else {
+        alert("Google Identity Services could not load. Check your connection or ad/shield settings.");
+      }
+    }, 500);
+    return;
+  }
+
+  tokenClient.requestAccessToken({
+    prompt: accessToken ? "" : "consent"
+  });
+};
+window.addEventListener("load", function() {
+  initGoogleAuth();
+});
 </script>
 </body>
 </html>
