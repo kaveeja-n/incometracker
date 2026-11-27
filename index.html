@@ -322,6 +322,92 @@ $("linkDrive").onclick = function() {
 window.addEventListener("load", function() {
   initGoogleAuth();
 });
+
+async function driveRequest(url, options) {
+  options = options || {};
+  options.headers = Object.assign({}, options.headers || {}, {
+    "Authorization": "Bearer " + accessToken
+  });
+  var res = await fetch(url, options);
+  if (res.status === 401) {
+    accessToken = null;
+    $("linkDrive").textContent = "Link Google Drive";
+    $("drvStatus").textContent = "Session expired — click Link Google Drive";
+    throw new Error("Token expired");
+  }
+  return res;
+}
+
+async function findOrCreateDriveFile() {
+  var q = encodeURIComponent("name='" + DRIVE_FILE_NAME + "' and trashed=false");
+  var listRes = await driveRequest("https://www.googleapis.com/drive/v3/files?q=" + q + "&fields=files(id,name)");
+  var listData = await listRes.json();
+  if (listData.files && listData.files.length > 0) {
+    return listData.files[0].id;
+  }
+
+  var createRes = await driveRequest("https://www.googleapis.com/drive/v3/files", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: DRIVE_FILE_NAME,
+      mimeType: "application/json"
+    })
+  });
+  var created = await createRes.json();
+  return created.id;
+}
+
+async function loadFromUserDrive() {
+  try {
+    driveFileId = await findOrCreateDriveFile();
+    var fileRes = await driveRequest("https://www.googleapis.com/drive/v3/files/" + driveFileId + "?alt=media");
+    var text = await fileRes.text();
+
+    if (text && text.trim()) {
+      var parsed = JSON.parse(text);
+      if (Array.isArray(parsed.entries)) {
+        D = parsed.entries;
+        localStorage.setItem(DK, JSON.stringify(D));
+      }
+      if (Array.isArray(parsed.sources) && parsed.sources.length > 0) {
+        SRC = parsed.sources;
+        localStorage.setItem(SK, JSON.stringify(SRC));
+      }
+      render();
+      $("drvStatus").textContent = "☁ Synced with user Drive";
+    } else {
+      await saveToUserDrive();
+    }
+  } catch (err) {
+    if (accessToken) $("drvStatus").textContent = "Drive sync error";
+  }
+}
+
+async function saveToUserDrive() {
+  if (!accessToken) return;
+  try {
+    if (!driveFileId) driveFileId = await findOrCreateDriveFile();
+    $("drvStatus").textContent = "Syncing to Drive…";
+    var payload = JSON.stringify({
+      entries: D,
+      sources: SRC,
+      updatedAt: new Date().toISOString()
+    }, null, 2);
+
+    await driveRequest(
+      "https://www.googleapis.com/upload/drive/v3/files/" + driveFileId + "?uploadType=media",
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: payload
+      }
+    );
+    $("drvStatus").textContent = "☁ Saved to Drive";
+  } catch (err) {
+    if (accessToken) $("drvStatus").textContent = "Drive save failed";
+  }
+}
 </script>
 </body>
 </html>
