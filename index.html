@@ -138,138 +138,296 @@ var DRIVE_FILE_NAME = "incomeflow-data.json";
 var accessToken = null;
 var driveFileId = null;
 var tokenClient = null;
-var DK="INCOMEFLOW_DATA_V2",SK="INCOMEFLOW_SOURCES_V2",TK="INCOMEFLOW_THEME_V2";
-var $=function(i){return document.getElementById(i)};
-function ld(k,f){try{var r=localStorage.getItem(k);return r?JSON.parse(r):f}catch(e){return f}}
-var D=ld(DK,[]),SRC=ld(SK,["Salary","Freelance","Interest","Rent"]),theme=ld(TK,"dark"),mon="",charts={},cur={};
-var syncQueue=Promise.resolve(),syncTimer=null;
-var today=new Date().toISOString().slice(0,10),MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-var P={sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>',moon:'<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>',plus:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',wallet:'<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l12-3v3"/><circle cx="16.5" cy="13.5" r="1"/>',check:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',swap:'<path d="M4 8h14l-4-4M20 16H6l4 4"/>',cal:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',bars:'<path d="M6 20V10M12 20V4M18 20v-7"/>',pie:'<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',up:'<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',down:'<path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>',sheet:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/>'};
-function ic(n){return '<svg class="ic" viewBox="0 0 24 24">'+P[n]+'</svg>'}
-document.querySelectorAll("[data-i]").forEach(function(e){e.insertAdjacentHTML("afterbegin",ic(e.dataset.i))});
-function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
-function rs(n){return "Rs. "+(+n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
-function mname(m){var p=m.split("-");return MN[+p[1]-1]+" "+p[0]}
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
-function cv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
-function months(){var s={};D.forEach(function(x){s[x.date.slice(0,7)]=1});return Object.keys(s).sort()}
-function add(date,rem,st,amt,due){if(!(amt>0))return false;D.push({id:uid(),date:date,remarks:rem||"Unspecified",status:st,amount:amt,due:(st==="Pending"&&due)?due:""});return true}
-function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}if(k!==TK)cloud()}
-function cloud(){if(!CL)return;clearTimeout(ct);$("cl").textContent="Syncing…";ct=setTimeout(function(){CL.set({entries:D,sources:SRC,at:Date.now()}).then(function(){$("cl").textContent="☁ Cloud saved"},function(){$("cl").textContent="Cloud save failed"})},800)}
-function commit(){sv(DK,D);render()}
-function cnt(id,v){var a=cur[id]||0,t0=performance.now();cur[id]=v;(function f(t){var p=Math.min(1,(t-t0)/700),e=1-Math.pow(1-p,3);$(id).textContent=rs(a+(v-a)*e);if(p<1)requestAnimationFrame(f)})(t0)}
-var YR=0;
-function dd(x){return Math.round((new Date(x.due)-new Date(today))/864e5)}
-function dueCell(x){if(x.status!=="Pending")return '<span class="m">—</span>';var c="";if(x.due){var n=dd(x);c=n<0?"od":n<=7?"sn":""}return '<input type="date" data-f="due" value="'+(x.due||"")+'" class="'+c+'" title="Expected / due date">'+(c==="od"?'<small class="od">Overdue</small>':"")}
-function png(id){var c=charts[id];if(!c)return;var s=c.canvas,o=document.createElement("canvas");o.width=s.width;o.height=s.height;var g=o.getContext("2d");g.fillStyle=cv("--card");g.fillRect(0,0,o.width,o.height);g.drawImage(s,0,0);var b=atob(o.toDataURL("image/png").split(",")[1]),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);dl({bar:"Monthly_Income_Inflows",pie:"Income_by_Source",area:"Total_Income_by_Month"}[id]+".png",u.buffer)}
-function repRender(yr,sc,tx,cy){
-  var st=$("fs").value,ys={};D.forEach(function(x){ys[+x.date.slice(0,4)]=1});
-  var yl=Object.keys(ys).sort();if(!yl.length)yl=[String(yr)];
-  $("ry").innerHTML=yl.map(function(y){return "<option"+(+y===yr?" selected":"")+">"+y+"</option>"}).join("");$("rst").value=st;
-  var tot=[],pn=[],rc=[];
-  MN.forEach(function(_,i){var m=yr+"-"+("0"+(i+1)).slice(-2),a=0,b=0;D.forEach(function(x){if(x.date.slice(0,7)===m&&(!st||x.status===st)){if(x.status==="Pending")a+=x.amount;else b+=x.amount}});pn.push(a);rc.push(b);tot.push(a+b)});
-  var act=tot.filter(function(v){return v>0}),sum=tot.reduce(function(a,v){return a+v},0);
-  $("rA").textContent=rs(act.length?sum/act.length:0);$("rAn").textContent=act.length+" active month"+(act.length===1?"":"s")+" in "+yr;
-  $("rT").textContent=rs(sum);$("rTn").textContent=(st||"All statuses")+" · "+yr;
-  var L=-1;tot.forEach(function(v,i){if(v>0)L=i});
-  if(L>0&&tot[L-1]>0){var p=(tot[L]-tot[L-1])/tot[L-1]*100;$("rG").textContent=(p>0?"+":"")+p.toFixed(1)+"%";$("rGn").textContent=MN[L]+" vs "+MN[L-1];$("rgc").style.setProperty("--k",p>=0?"var(--green)":"var(--red)")}
-  else{$("rG").textContent="—";$("rGn").textContent="Needs data in two consecutive months";$("rgc").style.setProperty("--k","var(--muted)")}
-  mk("area",{type:"line",data:{labels:MN,datasets:[{label:"Total inflow"+(st?" ("+st+")":""),data:tot,fill:true,borderColor:cy,backgroundColor:cy+"33",tension:.35}]},options:{maintainAspectRatio:false,scales:sc,plugins:{legend:{labels:{color:tx}}}}});
-  $("rt").innerHTML=MN.map(function(m,i){return tot[i]>0?"<tr><td>"+m+" "+yr+'</td><td class="n Pc">'+rs(pn[i])+'</td><td class="n Rc">'+rs(rc[i])+"</td></tr>":""}).join("")||'<tr><td colspan="3" class="em">No data for this selection</td></tr>';
-  var pd=D.filter(function(x){return x.status==="Pending"}),B=[["Overdue","--red",0,0],["Next 7 days","--amber",0,0],["8–30 days","--cyan",0,0],["Later / no date","--muted",0,0]];
-  pd.forEach(function(x){var i=3;if(x.due){var n=dd(x);i=n<0?0:n<=7?1:n<=30?2:3}B[i][2]+=x.amount;B[i][3]++});
-  $("ag").innerHTML=B.map(function(b){return '<div class="card" style="--k:var('+b[1]+')"><small class="m">'+b[0]+'</small><b style="color:var(--k);font-size:20px;display:block">'+rs(b[2])+'</b><small class="m">'+b[3]+" entries</small></div>"}).join("");
-  var up=pd.filter(function(x){return x.due}).sort(function(a,b){return a.due.localeCompare(b.due)}).slice(0,6);
-  $("up").innerHTML=up.length?up.map(function(x){var n=dd(x);return '<div class="hd" style="margin:8px 0 0"><span>'+esc(x.remarks)+'</span><span class="'+(n<0?"od":"m")+'">'+(n<0?Math.abs(n)+" days overdue":n===0?"due today":"due in "+n+" days")+" · "+x.due+'</span><span class="sp"></span><b>'+rs(x.amount)+"</b></div>"}).join(""):'<p class="m">Add a due date to pending entries to see upcoming inflows.</p>';
-}
-function pulse(){var t=$("tb");t.classList.add("go");setTimeout(function(){t.classList.remove("go")},900)}
-function mk(id,cfg){cfg.options.animation={duration:1000,easing:"easeOutQuart"};cfg.options.transitions={active:{animation:{duration:250}}};var c=charts[id];if(c&&c.config.type===cfg.type){c.data=cfg.data;c.options=cfg.options;c.update()}else{if(c)c.destroy();charts[id]=new Chart($(id),cfg)}}
-function applyTheme(){document.documentElement.setAttribute("data-theme",theme);$("tl").textContent=theme==="dark"?"Light Mode":"Dark Mode";$("ti").innerHTML=ic(theme==="dark"?"sun":"moon")}
+var DK = "INCOMEFLOW_DATA_V2", SK = "INCOMEFLOW_SOURCES_V2", TK = "INCOMEFLOW_THEME_V2";
+var $ = function(i) { return document.getElementById(i); };
+function ld(k, f) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (e) { return f; } }
+var D = ld(DK, []), SRC = ld(SK, ["Salary", "Freelance", "Interest", "Rent"]), theme = ld(TK, "dark"), mon = "", charts = {}, cur = {};
+var CL = null, ct = null, syncQueue = Promise.resolve(), syncTimer = null;
+var today = new Date().toISOString().slice(0, 10), MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+var P = {
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>',
+  moon: '<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>',
+  plus: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  wallet: '<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l12-3v3"/><circle cx="16.5" cy="13.5" r="1"/>',
+  check: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  swap: '<path d="M4 8h14l-4-4M20 16H6l4 4"/>',
+  cal: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+  bars: '<path d="M6 20V10M12 20V4M18 20v-7"/>',
+  pie: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  up: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',
+  down: '<path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>',
+  sheet: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/>'
+};
+function ic(n) { return '<svg class="ic" viewBox="0 0 24 24">' + P[n] + '</svg>'; }
+document.querySelectorAll("[data-i]").forEach(function(e) { e.insertAdjacentHTML("afterbegin", ic(e.dataset.i)); });
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+function rs(n) { return "Rs. " + (+n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function mname(m) { var p = m.split("-"); return MN[+p[1] - 1] + " " + p[0]; }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function cv(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function months() { var s = {}; D.forEach(function(x) { s[x.date.slice(0, 7)] = 1; }); return Object.keys(s).sort(); }
+function add(date, rem, st, amt, due) { if (!(amt > 0)) return false; D.push({ id: uid(), date: date, remarks: rem || "Unspecified", status: st, amount: amt, due: (st === "Pending" && due) ? due : "" }); return true; }
+function sv(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} if (k !== TK) cloud(); }
 
-function fill(){
-  var ms=months(),h='<option value="">All Months</option>'+ms.map(function(m){return '<option value="'+m+'">'+mname(m)+'</option>'}).join("");
-  document.querySelectorAll(".mon").forEach(function(s){s.innerHTML=h;s.value=ms.indexOf(mon)>-1?mon:""});
-  var all=SRC.slice();D.forEach(function(x){if(all.indexOf(x.remarks)<0)all.push(x.remarks)});
-  $("msrc").innerHTML=all.map(function(s){return "<option>"+esc(s)+"</option>"}).join("")+'<option value="__c">Custom…</option>';
-  $("sl").innerHTML=SRC.map(function(s,i){return '<div class="hd" style="margin:8px 0 0"><span>'+esc(s)+'</span><span class="sp"></span><button data-d="'+i+'">Remove</button></div>'}).join("")||'<p class="m">No sources saved.</p>';
+async function driveRequest(url, options) {
+  if (!accessToken) throw new Error("No Google Drive access token");
+  options = options || {};
+  options.headers = Object.assign({}, options.headers || {}, {
+    "Authorization": "Bearer " + accessToken
+  });
+  var res = await fetch(url, options);
+  if (res.status === 401) {
+    accessToken = null;
+    driveFileId = null;
+    $("linkDrive").textContent = "Link Google Drive";
+    $("drvStatus").textContent = "Session expired — click to re-link";
+    throw new Error("Token expired");
+  }
+  if (!res.ok) {
+    var errText = await res.text();
+    throw new Error("HTTP " + res.status + ": " + errText);
+  }
+  return res;
 }
-function filt(){var q=$("q").value.toLowerCase(),st=$("fs").value;return D.filter(function(x){return (!mon||x.date.slice(0,7)===mon)&&(!st||x.status===st)&&(!q||x.remarks.toLowerCase().indexOf(q)>-1)})}
 
-function render(){
+async function findOrCreateDriveFile() {
+  var q = encodeURIComponent("name='" + DRIVE_FILE_NAME + "' and trashed=false");
+  var listRes = await driveRequest("https://www.googleapis.com/drive/v3/files?q=" + q + "&fields=files(id,name)");
+  var listData = await listRes.json();
+  if (listData.files && listData.files.length > 0) {
+    return listData.files[0].id;
+  }
+
+  var createRes = await driveRequest("https://www.googleapis.com/drive/v3/files", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: DRIVE_FILE_NAME,
+      mimeType: "application/json"
+    })
+  });
+  var created = await createRes.json();
+  return created.id;
+}
+
+async function loadFromUserDrive() {
+  try {
+    driveFileId = await findOrCreateDriveFile();
+    var fileRes = await driveRequest("https://www.googleapis.com/drive/v3/files/" + driveFileId + "?alt=media");
+    var text = await fileRes.text();
+
+    if (text && text.trim()) {
+      var parsed = JSON.parse(text);
+      if (Array.isArray(parsed.entries)) {
+        D = parsed.entries;
+        try { localStorage.setItem(DK, JSON.stringify(D)); } catch (e) {}
+      }
+      if (Array.isArray(parsed.sources) && parsed.sources.length > 0) {
+        SRC = parsed.sources;
+        try { localStorage.setItem(SK, JSON.stringify(SRC)); } catch (e) {}
+      }
+      render();
+      $("drvStatus").textContent = "☁ Synced with Drive";
+    } else {
+      await saveToUserDrive();
+    }
+  } catch (err) {
+    console.error("Drive load error:", err);
+    if ($("drvStatus")) {
+      $("drvStatus").textContent = "Drive error: " + (err.message || err);
+    }
+  }
+}
+
+function saveToUserDrive() {
+  if (!accessToken) return Promise.resolve();
+  clearTimeout(syncTimer);
+  if ($("drvStatus")) $("drvStatus").textContent = "Syncing to Drive…";
+  return new Promise(function(resolve, reject) {
+    syncTimer = setTimeout(function() {
+      syncQueue = syncQueue.then(async function() {
+        if (!driveFileId) driveFileId = await findOrCreateDriveFile();
+        var payload = JSON.stringify({
+          entries: D,
+          sources: SRC,
+          updatedAt: new Date().toISOString()
+        }, null, 2);
+
+        await driveRequest(
+          "https://www.googleapis.com/upload/drive/v3/files/" + driveFileId + "?uploadType=media",
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: payload
+          }
+        );
+        if ($("drvStatus")) $("drvStatus").textContent = "☁ Saved to Drive";
+        resolve();
+      }).catch(function(err) {
+        console.error("Drive save error:", err);
+        if (accessToken && $("drvStatus")) {
+          $("drvStatus").textContent = "Drive save failed: " + (err.message || err);
+        }
+        reject(err);
+      });
+    }, 600);
+  });
+}
+
+function cloud() {
+  if (accessToken) {
+    saveToUserDrive().catch(function() {});
+    return;
+  }
+  if (!CL) return;
+  clearTimeout(ct);
+  $("cl").textContent = "Syncing…";
+  ct = setTimeout(function() {
+    CL.set({ entries: D, sources: SRC, at: Date.now() }).then(
+      function() { $("cl").textContent = "☁ Cloud saved"; },
+      function() { $("cl").textContent = "Cloud save failed"; }
+    );
+  }, 800);
+}
+
+function commit() { sv(DK, D); render(); }
+function cnt(id, v) { var a = cur[id] || 0, t0 = performance.now(); cur[id] = v; (function f(t) { var p = Math.min(1, (t - t0) / 700), e = 1 - Math.pow(1 - p, 3); $(id).textContent = rs(a + (v - a) * e); if (p < 1) requestAnimationFrame(f); })(t0); }
+var YR = 0;
+function dd(x) { return Math.round((new Date(x.due) - new Date(today)) / 864e5); }
+function dueCell(x) { if (x.status !== "Pending") return '<span class="m">—</span>'; var c = ""; if (x.due) { var n = dd(x); c = n < 0 ? "od" : n <= 7 ? "sn" : ""; } return '<input type="date" data-f="due" value="' + (x.due || "") + '" class="' + c + '" title="Expected / due date">' + (c === "od" ? '<small class="od">Overdue</small>' : ""); }
+function png(id) { var c = charts[id]; if (!c) return; var s = c.canvas, o = document.createElement("canvas"); o.width = s.width; o.height = s.height; var g = o.getContext("2d"); g.fillStyle = cv("--card"); g.fillRect(0, 0, o.width, o.height); g.drawImage(s, 0, 0); var b = atob(o.toDataURL("image/png").split(",")[1]), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); dl({ bar: "Monthly_Income_Inflows", pie: "Income_by_Source", area: "Total_Income_by_Month" }[id] + ".png", u.buffer); }
+function repRender(yr, sc, tx, cy) {
+  var st = $("fs").value, ys = {}; D.forEach(function(x) { ys[+x.date.slice(0, 4)] = 1; });
+  var yl = Object.keys(ys).sort(); if (!yl.length) yl = [String(yr)];
+  $("ry").innerHTML = yl.map(function(y) { return "<option" + (+y === yr ? " selected" : "") + ">" + y + "</option>"; }).join(""); $("rst").value = st;
+  var tot = [], pn = [], rc = [];
+  MN.forEach(function(_, i) { var m = yr + "-" + ("0" + (i + 1)).slice(-2), a = 0, b = 0; D.forEach(function(x) { if (x.date.slice(0, 7) === m && (!st || x.status === st)) { if (x.status === "Pending") a += x.amount; else b += x.amount; } }); pn.push(a); rc.push(b); tot.push(a + b); });
+  var act = tot.filter(function(v) { return v > 0; }), sum = tot.reduce(function(a, v) { return a + v; }, 0);
+  $("rA").textContent = rs(act.length ? sum / act.length : 0); $("rAn").textContent = act.length + " active month" + (act.length === 1 ? "" : "s") + " in " + yr;
+  $("rT").textContent = rs(sum); $("rTn").textContent = (st || "All statuses") + " · " + yr;
+  var L = -1; tot.forEach(function(v, i) { if (v > 0) L = i; });
+  if (L > 0 && tot[L - 1] > 0) { var p = (tot[L] - tot[L - 1]) / tot[L - 1] * 100; $("rG").textContent = (p > 0 ? "+" : "") + p.toFixed(1) + "%"; $("rGn").textContent = MN[L] + " vs " + MN[L - 1]; $("rgc").style.setProperty("--k", p >= 0 ? "var(--green)" : "var(--red)"); }
+  else { $("rG").textContent = "—"; $("rGn").textContent = "Needs data in two consecutive months"; $("rgc").style.setProperty("--k", "var(--muted)"); }
+  mk("area", { type: "line", data: { labels: MN, datasets: [{ label: "Total inflow" + (st ? " (" + st + ")" : ""), data: tot, fill: true, borderColor: cy, backgroundColor: cy + "33", tension: .35 }] }, options: { maintainAspectRatio: false, scales: sc, plugins: { legend: { labels: { color: tx } } } } });
+  $("rt").innerHTML = MN.map(function(m, i) { return tot[i] > 0 ? "<tr><td>" + m + " " + yr + '</td><td class="n Pc">' + rs(pn[i]) + '</td><td class="n Rc">' + rs(rc[i]) + "</td></tr>" : ""; }).join("") || '<tr><td colspan="3" class="em">No data for this selection</td></tr>';
+  var pd = D.filter(function(x) { return x.status === "Pending"; }), B = [["Overdue", "--red", 0, 0], ["Next 7 days", "--amber", 0, 0], ["8–30 days", "--cyan", 0, 0], ["Later / no date", "--muted", 0, 0]];
+  pd.forEach(function(x) { var i = 3; if (x.due) { var n = dd(x); i = n < 0 ? 0 : n <= 7 ? 1 : n <= 30 ? 2 : 3; } B[i][2] += x.amount; B[i][3]++; });
+  $("ag").innerHTML = B.map(function(b) { return '<div class="card" style="--k:var(' + b[1] + ')"><small class="m">' + b[0] + '</small><b style="color:var(--k);font-size:20px;display:block">' + rs(b[2]) + '</b><small class="m">' + b[3] + " entries</small></div>"; }).join("");
+  var up = pd.filter(function(x) { return x.due; }).sort(function(a, b) { return a.due.localeCompare(b.due); }).slice(0, 6);
+  $("up").innerHTML = up.length ? up.map(function(x) { var n = dd(x); return '<div class="hd" style="margin:8px 0 0"><span>' + esc(x.remarks) + '</span><span class="' + (n < 0 ? "od" : "m") + '">' + (n < 0 ? Math.abs(n) + " days overdue" : n === 0 ? "due today" : "due in " + n + " days") + " · " + x.due + '</span><span class="sp"></span><b>' + rs(x.amount) + "</b></div>"; }).join("") : '<p class="m">Add a due date to pending entries to see upcoming inflows.</p>';
+}
+function pulse() { var t = $("tb"); t.classList.add("go"); setTimeout(function() { t.classList.remove("go"); }, 900); }
+function mk(id, cfg) { cfg.options.animation = { duration: 1000, easing: "easeOutQuart" }; cfg.options.transitions = { active: { animation: { duration: 250 } } }; var c = charts[id]; if (c && c.config.type === cfg.type) { c.data = cfg.data; c.options = cfg.options; c.update(); } else { if (c) c.destroy(); charts[id] = new Chart($(id), cfg); } }
+function applyTheme() { document.documentElement.setAttribute("data-theme", theme); $("tl").textContent = theme === "dark" ? "Light Mode" : "Dark Mode"; $("ti").innerHTML = ic(theme === "dark" ? "sun" : "moon"); }
+
+function fill() {
+  var ms = months(), h = '<option value="">All Months</option>' + ms.map(function(m) { return '<option value="' + m + '">' + mname(m) + '</option>'; }).join("");
+  document.querySelectorAll(".mon").forEach(function(s) { s.innerHTML = h; s.value = ms.indexOf(mon) > -1 ? mon : ""; });
+  var all = SRC.slice(); D.forEach(function(x) { if (all.indexOf(x.remarks) < 0) all.push(x.remarks); });
+  $("msrc").innerHTML = all.map(function(s) { return "<option>" + esc(s) + "</option>"; }).join("") + '<option value="__c">Custom…</option>';
+  $("sl").innerHTML = SRC.map(function(s, i) { return '<div class="hd" style="margin:8px 0 0"><span>' + esc(s) + '</span><span class="sp"></span><button data-d="' + i + '">Remove</button></div>'; }).join("") || '<p class="m">No sources saved.</p>';
+}
+function filt() { var q = $("q").value.toLowerCase(), st = $("fs").value; return D.filter(function(x) { return (!mon || x.date.slice(0, 7) === mon) && (!st || x.status === st) && (!q || x.remarks.toLowerCase().indexOf(q) > -1); }); }
+
+function render() {
   fill();
-  var R=0,Pn=0,rn=0,pn=0;D.forEach(function(x){if(x.status==="Received"){R+=x.amount;rn++}else{Pn+=x.amount;pn++}});
-  cnt("kR",R);cnt("kP",Pn);cnt("kT",R+Pn);
-  $("kRn").textContent=rn+" entries";var od=D.filter(function(x){return x.status==="Pending"&&x.due&&x.due<today}).length;$("kPn").textContent=pn+" entries"+(od?" · "+od+" overdue":"");$("kTp").textContent=(R+Pn?Math.round(R/(R+Pn)*100):0)+"% Received";
-  var f=filt().sort(function(a,b){return a.date.localeCompare(b.date)});
-  $("cnt").textContent=f.length+" of "+D.length+" entries shown";
-  $("tb").innerHTML=f.length?f.map(function(x,i){return '<tr data-id="'+x.id+'"><td>'+(i+1)+'</td><td>'+mname(x.date.slice(0,7))+'</td><td><input type="date" data-f="date" value="'+x.date+'"></td><td><input data-f="remarks" value="'+esc(x.remarks)+'"></td><td><select data-f="status" class="'+(x.status==="Received"?"Rc":"Pc")+'"><option'+(x.status==="Received"?" selected":"")+'>Received</option><option'+(x.status==="Pending"?" selected":"")+'>Pending</option></select></td><td>'+dueCell(x)+'</td><td class="n"><div class="am"><input type="number" step="0.01" data-f="amount" value="'+x.amount+'"><button data-x="'+x.id+'" aria-label="Delete">'+ic("trash")+'</button></div></td></tr>'}).join(""):'<tr><td colspan="7" class="em">'+ic("sheet")+'No entries yet</td></tr>';
-  var ys=D.map(function(x){return +x.date.slice(0,4)}),yr=(YR&&ys.indexOf(YR)>-1)?YR:(ys.length?Math.max.apply(null,ys):new Date().getFullYear());
-  var rec=MN.map(function(_,i){return D.filter(function(x){return x.date.slice(0,7)===yr+"-"+("0"+(i+1)).slice(-2)&&x.status==="Received"}).reduce(function(a,x){return a+x.amount},0)});
-  var pen=MN.map(function(_,i){return D.filter(function(x){return x.date.slice(0,7)===yr+"-"+("0"+(i+1)).slice(-2)&&x.status==="Pending"}).reduce(function(a,x){return a+x.amount},0)});
-  var tx=cv("--muted"),ln=cv("--line"),g=cv("--green"),w=cv("--amber"),cy=cv("--cyan"),po=$("bm").value==="p";
-  var sc={x:{ticks:{color:tx},grid:{color:ln}},y:{ticks:{color:tx},grid:{color:ln},beginAtZero:true,suggestedMax:1}};
-  mk("bar",{type:"bar",data:{labels:MN,datasets:po?[{label:"Pending",data:pen,backgroundColor:w,borderRadius:5}]:[{label:"Received",data:rec,backgroundColor:g,borderRadius:5},{label:"Pending",data:pen,backgroundColor:w,borderRadius:5}]},options:{maintainAspectRatio:false,scales:sc,plugins:{legend:{display:false}}}});
-  $("strip").textContent=po?MN.map(function(m,i){return pen[i]?m+": "+rs(pen[i]):""}).filter(Boolean).join("  ·  "):"";
-  var by={};D.filter(function(x){return !mon||x.date.slice(0,7)===mon}).forEach(function(x){by[x.remarks]=(by[x.remarks]||0)+x.amount});
-  var k=Object.keys(by);$("pov").classList.toggle("hide",k.length>0);
-  mk("pie",{type:"doughnut",data:{labels:k,datasets:[{data:k.map(function(s){return by[s]}),backgroundColor:["#3b82f6","#10b981","#f5b301","#a855f7","#f43f5e","#22d3ee","#84cc16","#ec4899"],borderColor:cv("--card"),borderWidth:2}]},options:{maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom",labels:{color:tx}}}}});
-  repRender(yr,sc,tx,cy);
-  var ms=months();
-  var _x=ms.map(function(m){var a=0,b=0;D.forEach(function(x){if(x.date.slice(0,7)===m){if(x.status==="Pending")a+=x.amount;else b+=x.amount}});return "<tr><td>"+mname(m)+'</td><td class="n Pc">'+rs(a)+'</td><td class="n Rc">'+rs(b)+"</td></tr>"}).join("")||'<tr><td colspan="3" class="em">No data yet</td></tr>';
+  var R = 0, Pn = 0, rn = 0, pn = 0; D.forEach(function(x) { if (x.status === "Received") { R += x.amount; rn++; } else { Pn += x.amount; pn++; } });
+  cnt("kR", R); cnt("kP", Pn); cnt("kT", R + Pn);
+  $("kRn").textContent = rn + " entries"; var od = D.filter(function(x) { return x.status === "Pending" && x.due && x.due < today; }).length; $("kPn").textContent = pn + " entries" + (od ? " · " + od + " overdue" : ""); $("kTp").textContent = (R + Pn ? Math.round(R / (R + Pn) * 100) : 0) + "% Received";
+  var f = filt().sort(function(a, b) { return a.date.localeCompare(b.date); });
+  $("cnt").textContent = f.length + " of " + D.length + " entries shown";
+  $("tb").innerHTML = f.length ? f.map(function(x, i) { return '<tr data-id="' + x.id + '"><td>' + (i + 1) + '</td><td>' + mname(x.date.slice(0, 7)) + '</td><td><input type="date" data-f="date" value="' + x.date + '"></td><td><input data-f="remarks" value="' + esc(x.remarks) + '"></td><td><select data-f="status" class="' + (x.status === "Received" ? "Rc" : "Pc") + '"><option' + (x.status === "Received" ? " selected" : "") + '>Received</option><option' + (x.status === "Pending" ? " selected" : "") + '>Pending</option></select></td><td>' + dueCell(x) + '</td><td class="n"><div class="am"><input type="number" step="0.01" data-f="amount" value="' + x.amount + '"><button data-x="' + x.id + '" aria-label="Delete">' + ic("trash") + '</button></div></td></tr>'; }).join("") : '<tr><td colspan="7" class="em">' + ic("sheet") + 'No entries yet</td></tr>';
+  var ys = D.map(function(x) { return +x.date.slice(0, 4); }), yr = (YR && ys.indexOf(YR) > -1) ? YR : (ys.length ? Math.max.apply(null, ys) : new Date().getFullYear());
+  var rec = MN.map(function(_, i) { return D.filter(function(x) { return x.date.slice(0, 7) === yr + "-" + ("0" + (i + 1)).slice(-2) && x.status === "Received"; }).reduce(function(a, x) { return a + x.amount; }, 0); });
+  var pen = MN.map(function(_, i) { return D.filter(function(x) { return x.date.slice(0, 7) === yr + "-" + ("0" + (i + 1)).slice(-2) && x.status === "Pending"; }).reduce(function(a, x) { return a + x.amount; }, 0); });
+  var tx = cv("--muted"), ln = cv("--line"), g = cv("--green"), w = cv("--amber"), cy = cv("--cyan"), po = $("bm").value === "p";
+  var sc = { x: { ticks: { color: tx }, grid: { color: ln } }, y: { ticks: { color: tx }, grid: { color: ln }, beginAtZero: true, suggestedMax: 1 } };
+  mk("bar", { type: "bar", data: { labels: MN, datasets: po ? [{ label: "Pending", data: pen, backgroundColor: w, borderRadius: 5 }] : [{ label: "Received", data: rec, backgroundColor: g, borderRadius: 5 }, { label: "Pending", data: pen, backgroundColor: w, borderRadius: 5 }] }, options: { maintainAspectRatio: false, scales: sc, plugins: { legend: { display: false } } } });
+  $("strip").textContent = po ? MN.map(function(m, i) { return pen[i] ? m + ": " + rs(pen[i]) : ""; }).filter(Boolean).join("  ·  ") : "";
+  var by = {}; D.filter(function(x) { return !mon || x.date.slice(0, 7) === mon; }).forEach(function(x) { by[x.remarks] = (by[x.remarks] || 0) + x.amount; });
+  var k = Object.keys(by); $("pov").classList.toggle("hide", k.length > 0);
+  mk("pie", { type: "doughnut", data: { labels: k, datasets: [{ data: k.map(function(s) { return by[s]; }), backgroundColor: ["#3b82f6", "#10b981", "#f5b301", "#a855f7", "#f43f5e", "#22d3ee", "#84cc16", "#ec4899"], borderColor: cv("--card"), borderWidth: 2 }] }, options: { maintainAspectRatio: false, cutout: "62%", plugins: { legend: { position: "bottom", labels: { color: tx } } } } });
+  repRender(yr, sc, tx, cy);
 }
 
-document.querySelectorAll(".nav").forEach(function(b){b.onclick=function(){document.querySelectorAll(".nav").forEach(function(n){n.classList.toggle("on",n===b)});["dash","rep","set"].forEach(function(v){$(v).classList.toggle("hide",v!==b.dataset.v)});pulse();render()}});
-$("theme").onclick=function(){theme=theme==="dark"?"light":"dark";sv(TK,theme);applyTheme();render()};
-document.querySelectorAll(".mon").forEach(function(s){s.onchange=function(){mon=s.value;pulse();render()}});
-$("q").oninput=render;
-$("ry").onchange=function(){YR=+this.value;pulse();render()};
-$("rst").onchange=function(){$("fs").value=this.value;pulse();render()};
-$("ms").onchange=function(){$("duew").classList.toggle("hide",this.value!=="Pending")};
-document.addEventListener("click",function(e){var b=e.target.closest("[data-png]");if(b)png(b.dataset.png)});$("fs").onchange=$("bm").onchange=function(){pulse();render()};
-$("clr").onclick=function(){if(D.length&&confirm("Delete ALL saved inflows?")){D=[];commit()}};
-$("tb").onchange=function(e){var tr=e.target.closest("tr"),f=e.target.dataset.f;if(!tr||!f)return;var x=D.find(function(y){return y.id===tr.dataset.id});if(!x)return;x[f]=f==="amount"?(parseFloat(e.target.value)||0):e.target.value;commit()};
-$("tb").onclick=function(e){var b=e.target.closest("button[data-x]");if(b&&confirm("Delete this entry?")){D=D.filter(function(x){return x.id!==b.dataset.x});commit()}};
-$("nsb").onclick=function(){var v=$("ns").value.trim();if(v&&SRC.indexOf(v)<0){SRC.push(v);sv(SK,SRC);$("ns").value="";render()}};
-$("sl").onclick=function(e){var i=e.target.dataset.d;if(i!=null){SRC.splice(+i,1);sv(SK,SRC);render()}};
+document.querySelectorAll(".nav").forEach(function(b) { b.onclick = function() { document.querySelectorAll(".nav").forEach(function(n) { n.classList.toggle("on", n === b); }); ["dash", "rep", "set"].forEach(function(v) { $(v).classList.toggle("hide", v !== b.dataset.v); }); pulse(); render(); }; });
+$("theme").onclick = function() { theme = theme === "dark" ? "light" : "dark"; sv(TK, theme); applyTheme(); render(); };
+document.querySelectorAll(".mon").forEach(function(s) { s.onchange = function() { mon = s.value; pulse(); render(); }; });
+$("q").oninput = render;
+$("ry").onchange = function() { YR = +this.value; pulse(); render(); };
+$("rst").onchange = function() { $("fs").value = this.value; pulse(); render(); };
+$("ms").onchange = function() { $("duew").classList.toggle("hide", this.value !== "Pending"); };
+document.addEventListener("click", function(e) { var b = e.target.closest("[data-png]"); if (b) png(b.dataset.png); }); $("fs").onchange = $("bm").onchange = function() { pulse(); render(); };
+$("clr").onclick = function() { if (D.length && confirm("Delete ALL saved inflows?")) { D = []; commit(); } };
+$("tb").onchange = function(e) { var tr = e.target.closest("tr"), f = e.target.dataset.f; if (!tr || !f) return; var x = D.find(function(y) { return y.id === tr.dataset.id; }); if (!x) return; x[f] = f === "amount" ? (parseFloat(e.target.value) || 0) : e.target.value; commit(); };
+$("tb").onclick = function(e) { var b = e.target.closest("button[data-x]"); if (b && confirm("Delete this entry?")) { D = D.filter(function(x) { return x.id !== b.dataset.x; }); commit(); } };
+$("nsb").onclick = function() { var v = $("ns").value.trim(); if (v && SRC.indexOf(v) < 0) { SRC.push(v); sv(SK, SRC); $("ns").value = ""; render(); } };
+$("sl").onclick = function(e) { var i = e.target.dataset.d; if (i != null) { SRC.splice(+i, 1); sv(SK, SRC); render(); } };
 
-function show(on){$("mod").classList.toggle("hide",!on)}
-$("add").onclick=function(){$("md").value=today;show(true)};$("mx").onclick=function(){show(false)};
-document.querySelectorAll(".tabs button").forEach(function(b){b.onclick=function(){document.querySelectorAll(".tabs button").forEach(function(x){x.classList.toggle("on",x===b)});["t1","t2"].forEach(function(t){$(t).classList.toggle("hide",t!==b.dataset.t)})}});
-$("msrc").onchange=function(){$("cust").classList.toggle("hide",this.value!=="__c")};
-$("mb").onclick=function(){var s=$("msrc").value;if(s==="__c"){s=$("mc").value.trim();if(s&&$("msave").checked&&SRC.indexOf(s)<0){SRC.push(s);sv(SK,SRC)}}
-  if(add($("md").value||today,s,$("ms").value,parseFloat($("ma").value),$("mdue").value)){$("ma").value="";$("mdue").value="";commit();show(false)}else alert("Enter a valid amount.")};
-function pdate(s){var m=s.match(/(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];m=s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);if(m){var y=m[3].length==2?"20"+m[3]:m[3];return y+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2)}return today}
-$("smsb").onclick=function(){var n=0;$("sms").value.split(/\n+/).forEach(function(l){
-  var a=l.match(/(?:Rs\.?|INR|LKR|amt|amount)\s*[:.]?\s*([\d,]+(?:\.\d+)?)/i);if(!a)return;
-  var s=l.match(/(?:from|by)\s+([A-Za-z0-9 &._-]{2,30}?)(?=[.,;]|\s+on\b|\s+Ref|$)/i);
-  if(add(pdate(l),s?s[1].trim():"SMS credit","Received",parseFloat(a[1].replace(/,/g,""))))n++});
-  $("sms").value="";commit();if(n)show(false);else alert("No amounts found.")};
-$("imp").onclick=function(){$("fi").click()};
-$("fi").onchange=function(){var fl=this.files[0];if(!fl)return;if(typeof XLSX==="undefined"){alert("Excel library failed to load. Check your internet connection.");return}var r=new FileReader();r.onload=function(){try{
-  var wb=XLSX.read(r.result,{type:"array"}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""}),n=0;
-  rows.forEach(function(o){var k={};Object.keys(o).forEach(function(c){k[c.toLowerCase().trim()]=o[c]});
-    var d=k["date"],ds;if(typeof d==="number")ds=new Date(Math.round((d-25569)*864e5)).toISOString().slice(0,10);else ds=pdate(String(d||""));
-    var st=/pend/i.test(k["status"])?"Pending":"Received",am=parseFloat(String(k["inflow amount"]||k["amount"]||"").replace(/[^\d.]/g,""));
-    var dd0=k["due date"]||k["due"]||k["expected date"],dv=typeof dd0==="number"?new Date(Math.round((dd0-25569)*864e5)).toISOString().slice(0,10):(dd0?pdate(String(dd0)):"");if(add(ds,String(k["remarks / source"]||k["remarks"]||k["source"]||"Imported"),st,am,dv))n++});
-  alert("Imported "+n+" of "+rows.length+" rows.");commit()}catch(e){alert("Could not read that file.")}};r.readAsArrayBuffer(fl);this.value=""};
+function show(on) { $("mod").classList.toggle("hide", !on); }
+$("add").onclick = function() { $("md").value = today; show(true); }; $("mx").onclick = function() { show(false); };
+document.querySelectorAll(".tabs button").forEach(function(b) { b.onclick = function() { document.querySelectorAll(".tabs button").forEach(function(x) { x.classList.toggle("on", x === b); }); ["t1", "t2"].forEach(function(t) { $(t).classList.toggle("hide", t !== b.dataset.t); }); }; });
+$("msrc").onchange = function() { $("cust").classList.toggle("hide", this.value !== "__c"); };
+$("mb").onclick = function() {
+  var s = $("msrc").value; if (s === "__c") { s = $("mc").value.trim(); if (s && $("msave").checked && SRC.indexOf(s) < 0) { SRC.push(s); sv(SK, SRC); } }
+  if (add($("md").value || today, s, $("ms").value, parseFloat($("ma").value), $("mdue").value)) { $("ma").value = ""; $("mdue").value = ""; commit(); show(false); } else alert("Enter a valid amount.");
+};
+function pdate(s) { var m = s.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/); if (m) { var y = m[3].length == 2 ? "20" + m[3] : m[3]; return y + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2); } return today; }
+$("smsb").onclick = function() {
+  var n = 0; $("sms").value.split(/\n+/).forEach(function(l) {
+    var a = l.match(/(?:Rs\.?|INR|LKR|amt|amount)\s*[:.]?\s*([\d,]+(?:\.\d+)?)/i); if (!a) return;
+    var s = l.match(/(?:from|by)\s+([A-Za-z0-9 &._-]{2,30}?)(?=[.,;]|\s+on\b|\s+Ref|$)/i);
+    if (add(pdate(l), s ? s[1].trim() : "SMS credit", "Received", parseFloat(a[1].replace(/,/g, "")))) n++;
+  });
+  $("sms").value = ""; commit(); if (n) show(false); else alert("No amounts found.");
+};
+$("imp").onclick = function() { $("fi").click(); };
+$("fi").onchange = function() {
+  var fl = this.files[0]; if (!fl) return; if (typeof XLSX === "undefined") { alert("Excel library failed to load. Check your internet connection."); return; }
+  var r = new FileReader(); r.onload = function() {
+    try {
+      var wb = XLSX.read(r.result, { type: "array" }), rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" }), n = 0;
+      rows.forEach(function(o) {
+        var k = {}; Object.keys(o).forEach(function(c) { k[c.toLowerCase().trim()] = o[c]; });
+        var d = k["date"], ds; if (typeof d === "number") ds = new Date(Math.round((d - 25569) * 864e5)).toISOString().slice(0, 10); else ds = pdate(String(d || ""));
+        var st = /pend/i.test(k["status"]) ? "Pending" : "Received", am = parseFloat(String(k["inflow amount"] || k["amount"] || "").replace(/[^\d.]/g, ""));
+        var dd0 = k["due date"] || k["due"] || k["expected date"], dv = typeof dd0 === "number" ? new Date(Math.round((dd0 - 25569) * 864e5)).toISOString().slice(0, 10) : (dd0 ? pdate(String(dd0)) : "");
+        if (add(ds, String(k["remarks / source"] || k["remarks"] || k["source"] || "Imported"), st, am, dv)) n++;
+      });
+      alert("Imported " + n + " of " + rows.length + " rows."); commit();
+    } catch (e) { alert("Could not read that file."); }
+  }; r.readAsArrayBuffer(fl); this.value = "";
+};
 
-function rowsOut(){return filt().map(function(x){return {"Date":x.date,"Month":x.date.slice(0,7),"Remarks / Source":x.remarks,"Status":x.status,"Due Date":x.due||"","Inflow Amount":x.amount}})}
-function dl(name,data){var blob=data instanceof Blob?data:new Blob([data],{type:typeof data==="string"?"text/csv;charset=utf-8;":"application/octet-stream"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url)},1000)}
-function wbOut(rows,name){var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Inflows");dl(name,XLSX.write(wb,{type:"array",bookType:"xlsx"}))}
-$("xx").onclick=function(){wbOut(rowsOut(),"Income_Inflows_Ledger.xlsx")};
-$("xc").onclick=function(){dl("Income_Inflows_Ledger.csv",XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(rowsOut())))};
-$("tp").onclick=function(){wbOut([{"Date":today,"Month":today.slice(0,7),"Remarks / Source":"Salary","Status":"Received","Inflow Amount":50000}],"IncomeFlow_Import_Template.xlsx")};
+function rowsOut() { return filt().map(function(x) { return { "Date": x.date, "Month": x.date.slice(0, 7), "Remarks / Source": x.remarks, "Status": x.status, "Due Date": x.due || "", "Inflow Amount": x.amount }; }); }
+function dl(name, data) { var blob = data instanceof Blob ? data : new Blob([data], { type: typeof data === "string" ? "text/csv;charset=utf-8;" : "application/octet-stream" }), url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function() { URL.revokeObjectURL(url); }, 1000); }
+function wbOut(rows, name) { var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Inflows"); dl(name, XLSX.write(wb, { type: "array", bookType: "xlsx" })); }
+$("xx").onclick = function() { wbOut(rowsOut(), "Income_Inflows_Ledger.xlsx"); };
+$("xc").onclick = function() { dl("Income_Inflows_Ledger.csv", XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(rowsOut()))); };
+$("tp").onclick = function() { wbOut([{ "Date": today, "Month": today.slice(0, 7), "Remarks / Source": "Salary", "Status": "Received", "Inflow Amount": 50000 }], "IncomeFlow_Import_Template.xlsx"); };
 
-applyTheme();pulse();render();
-(async function(){try{
-  var u=await claude.use("user"),db=await claude.use("db");if(!u||!db)return;
-  var id=await u.id();if(!id)return;
-  CL=db.doc("data/users/"+id+"/ledger");
-  var t=setTimeout(function(){$("cl").textContent="Cloud unreachable"},10000);
-  var s=await CL.get();clearTimeout(t);var d=s.exists?s.data():null;
-  if(d&&Array.isArray(d.entries)){D=d.entries;if(Array.isArray(d.sources))SRC=d.sources;try{localStorage.setItem(DK,JSON.stringify(D));localStorage.setItem(SK,JSON.stringify(SRC))}catch(e){}render();$("cl").textContent="☁ Synced"}
-  else{await CL.set({entries:D,sources:SRC,at:Date.now()});$("cl").textContent="☁ Cloud saved"}
-}catch(e){$("cl").textContent="Saved on this device only"}})();
+applyTheme(); pulse(); render();
+(async function() {
+  try {
+    if (typeof claude === "undefined" || !claude.use) return;
+    var u = await claude.use("user"), db = await claude.use("db"); if (!u || !db) return;
+    var id = await u.id(); if (!id) return;
+    CL = db.doc("data/users/" + id + "/ledger");
+    var t = setTimeout(function() { $("cl").textContent = "Cloud unreachable"; }, 10000);
+    var s = await CL.get(); clearTimeout(t); var d = s.exists ? s.data() : null;
+    if (d && Array.isArray(d.entries)) {
+      D = d.entries; if (Array.isArray(d.sources)) SRC = d.sources;
+      try { localStorage.setItem(DK, JSON.stringify(D)); localStorage.setItem(SK, JSON.stringify(SRC)); } catch (e) {}
+      render(); $("cl").textContent = "☁ Synced";
+    } else {
+      await CL.set({ entries: D, sources: SRC, at: Date.now() }); $("cl").textContent = "☁ Cloud saved";
+    }
+  } catch (e) {}
+})();
+
 function initGoogleAuth() {
   if (tokenClient) return true;
   if (!window.google || !google.accounts || !google.accounts.oauth2) {
@@ -281,42 +439,46 @@ function initGoogleAuth() {
     scope: DRIVE_SCOPE,
     callback: function(resp) {
       if (resp && resp.error) {
-        $("drvStatus").textContent = "Drive auth error: " + resp.error;
+        if ($("drvStatus")) $("drvStatus").textContent = "Drive auth error: " + resp.error;
         return;
       }
 
       if (resp && resp.access_token) {
         accessToken = resp.access_token;
-        driveFileId = null; // Re-verify/find file for the active session
-        $("linkDrive").textContent = "Drive Linked";
-        $("drvStatus").textContent = "Connecting to Drive…";
+        driveFileId = null;
+        if ($("linkDrive")) $("linkDrive").textContent = "Drive Linked";
+        if ($("drvStatus")) $("drvStatus").textContent = "Connecting to Drive…";
         loadFromUserDrive();
       } else {
-        $("drvStatus").textContent = "Sign-in cancelled";
+        if ($("drvStatus")) $("drvStatus").textContent = "Sign-in cancelled";
       }
     }
   });
 
   return true;
 }
-$("linkDrive").onclick = function() {
-  var ready = initGoogleAuth();
-  if (!ready) {
-    $("drvStatus").textContent = "Loading Google sign-in…";
-    setTimeout(function() {
-      if (initGoogleAuth()) {
-        tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" });
-      } else {
-        alert("Google Identity Services could not load. Check your connection or ad/shield settings.");
-      }
-    }, 500);
-    return;
-  }
 
-  tokenClient.requestAccessToken({
-    prompt: accessToken ? "" : "consent"
-  });
-};
+if ($("linkDrive")) {
+  $("linkDrive").onclick = function() {
+    var ready = initGoogleAuth();
+    if (!ready) {
+      if ($("drvStatus")) $("drvStatus").textContent = "Loading Google sign-in…";
+      setTimeout(function() {
+        if (initGoogleAuth()) {
+          tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" });
+        } else {
+          alert("Google Identity Services could not load. Check your connection or ad/shield settings.");
+        }
+      }, 500);
+      return;
+    }
+
+    tokenClient.requestAccessToken({
+      prompt: accessToken ? "" : "consent"
+    });
+  };
+}
+
 window.addEventListener("load", function() {
   initGoogleAuth();
 });
