@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{--bg:#0a0f1e;--card:#0f1729;--line:#1b2744;--text:#e8edf7;--muted:#8693ad;--green:#10b981;--amber:#f5b301;--cyan:#22d3ee;--red:#f43f5e;--blue:#3b82f6;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 :root[data-theme="light"]{--bg:#f2f5fa;--card:#fff;--line:#e1e6ef;--text:#18202e;--muted:#667389;--green:#059669;--amber:#b45309;--cyan:#0e7490;--red:#e11d48;--blue:#2563eb;color-scheme:light}
@@ -67,6 +68,8 @@ tbody tr:hover{background:color-mix(in srgb,var(--blue) 7%,transparent)}
 <body>
 <div class="wrap">
 <div class="top">
+  <button id="linkDrive">Link Google Drive</button>
+<span class="m s" id="drvStatus">Not linked</span>
   <button class="nav on" data-v="dash">Dashboard</button><button class="nav" data-v="rep">Reports</button><button class="nav" data-v="set">Settings</button>
   <span class="sp"></span><span class="m s" id="cl"></span>
   <button id="theme"><span id="ti"></span><span id="tl"></span></button>
